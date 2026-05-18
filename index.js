@@ -1,10 +1,22 @@
 require("dotenv").config();
+
 const { Client, GatewayIntentBits, Collection } = require("discord.js");
 const fs = require("fs");
 const { hasPermission } = require("./utils/permissions");
-console.log("TOKEN RAW:", process.env.DISCORD_TOKEN);
-console.log("TOKEN LENGTH:", process.env.DISCORD_TOKEN?.length);
 
+// ================= ENV DEBUG =================
+const TOKEN = process.env.DISCORD_TOKEN;
+const PREFIX = process.env.PREFIX || "snow";
+
+console.log("TOKEN RAW:", TOKEN);
+console.log("TOKEN LENGTH:", TOKEN?.length);
+
+// Safety check (prevents silent Railway crash)
+if (!TOKEN) {
+  throw new Error("DISCORD_TOKEN is missing in environment variables");
+}
+
+// ================= CLIENT =================
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -13,37 +25,8 @@ const client = new Client({
   ]
 });
 
-client.login(process.env.DISCORD_TOKEN);
-
 client.commands = new Collection();
 client.prefixAliases = new Map();
-
-const { status } = require('minecraft-server-util');
-
-async function getServerStatus() {
-  try {
-    const res = await status('185.207.166.70', 19007, {
-      timeout: 5000
-    });
-
-    console.log(res);
-
-    return {
-      online: true,
-      players: res.players.online,
-      max: res.players.max,
-      version: res.version.name
-    };
-  } catch (err) {
-    console.error(err);
-    return {
-      online: false
-    };
-  }
-}
-
-const prefix = process.env.PREFIX || "snow";
-
 
 // ================= LOAD COMMANDS =================
 const folders = fs.readdirSync("./commands", { withFileTypes: true })
@@ -69,20 +52,18 @@ for (const folder of folders) {
   }
 }
 
-
 // ================= READY =================
-client.once("ready", () => {
+client.once("clientReady", () => {
   console.log(`✅ SnowSMP Core online as ${client.user.tag}`);
 });
 
-
-// ================= PREFIX =================
+// ================= PREFIX COMMANDS =================
 client.on("messageCreate", async (message) => {
   try {
     if (message.author.bot) return;
-    if (!message.content.startsWith(prefix)) return;
+    if (!message.content.startsWith(PREFIX)) return;
 
-    const args = message.content.slice(prefix.length).trim().split(/ +/);
+    const args = message.content.slice(PREFIX.length).trim().split(/ +/);
     const name = args.shift()?.toLowerCase();
     if (!name) return;
 
@@ -90,20 +71,18 @@ client.on("messageCreate", async (message) => {
     const cmd = client.commands.get(cmdName);
     if (!cmd?.executePrefix) return;
 
-    if (cmd.permissions) {
-      if (!hasPermission(message.member, cmd.permissions)) {
-        return message.reply("❌ No permission.");
-      }
+    if (cmd.permissions && !hasPermission(message.member, cmd.permissions)) {
+      return message.reply("❌ No permission.");
     }
 
     await cmd.executePrefix(message, args);
-  } catch (e) {
-    console.error(e);
+
+  } catch (err) {
+    console.error("PREFIX COMMAND ERROR:", err);
   }
 });
 
-
-// ================= SLASH =================
+// ================= SLASH COMMANDS =================
 client.on("interactionCreate", async (interaction) => {
   try {
     if (!interaction.isChatInputCommand()) return;
@@ -111,20 +90,19 @@ client.on("interactionCreate", async (interaction) => {
     const cmd = client.commands.get(interaction.commandName);
     if (!cmd?.execute) return;
 
-    if (cmd.permissions) {
-      if (!hasPermission(interaction.member, cmd.permissions)) {
-        return interaction.reply({
-          content: "❌ No permission.",
-          ephemeral: true
-        });
-      }
+    if (cmd.permissions && !hasPermission(interaction.member, cmd.permissions)) {
+      return interaction.reply({
+        content: "❌ No permission.",
+        ephemeral: true
+      });
     }
 
     await cmd.execute(interaction);
-  } catch (e) {
-    console.error(e);
+
+  } catch (err) {
+    console.error("SLASH COMMAND ERROR:", err);
   }
 });
 
-
-client.login(process.env.DISCORD_TOKEN);
+// ================= LOGIN (ONLY ONCE) =================
+client.login(TOKEN);
