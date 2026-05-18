@@ -2,6 +2,8 @@ require("dotenv").config();
 const { Client, GatewayIntentBits, Collection } = require("discord.js");
 const fs = require("fs");
 const { hasPermission } = require("./utils/permissions");
+console.log("TOKEN RAW:", process.env.DISCORD_TOKEN);
+console.log("TOKEN LENGTH:", process.env.DISCORD_TOKEN?.length);
 
 const client = new Client({
   intents: [
@@ -10,6 +12,8 @@ const client = new Client({
     GatewayIntentBits.MessageContent
   ]
 });
+
+client.login(process.env.DISCORD_TOKEN);
 
 client.commands = new Collection();
 client.prefixAliases = new Map();
