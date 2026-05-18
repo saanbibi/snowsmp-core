@@ -18,6 +18,30 @@ client.login(process.env.DISCORD_TOKEN);
 client.commands = new Collection();
 client.prefixAliases = new Map();
 
+const { status } = require('minecraft-server-util');
+
+async function getServerStatus() {
+  try {
+    const res = await status('185.207.166.70', 19007, {
+      timeout: 5000
+    });
+
+    console.log(res);
+
+    return {
+      online: true,
+      players: res.players.online,
+      max: res.players.max,
+      version: res.version.name
+    };
+  } catch (err) {
+    console.error(err);
+    return {
+      online: false
+    };
+  }
+}
+
 const prefix = process.env.PREFIX || "snow";
 
 
