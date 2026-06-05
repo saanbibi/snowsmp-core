@@ -1,6 +1,5 @@
 module.exports = {
-  data: { name: "link" },
-  aliases: ["links"],
+  data: { name: "links" },
 
   async executePrefix(message) {
     return message.reply(
